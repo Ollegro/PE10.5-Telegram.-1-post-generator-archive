@@ -7,9 +7,11 @@ Zapier/Albato шлёт POST на https://ВАШ_ДОМЕН/generate-post
 ЧТО НУЖНО ЗАРАНЕЕ
 -----------------
 1. VPS Beget (Ubuntu), SSH-доступ (логин/пароль или ключ из панели).
+   Локально храните данные в beget-vps/ssh.local.env (скопируйте из ssh.local.env.example).
+   Этот файл в Git не попадает.
 2. Домен, привязанный к VPS (или поддомен *.beget.tech).
 3. Ключи:
-   OPENAI_API_KEY
+   API_KEY (ProxyAPI)
    CURRENTS_API_KEY
 4. Репозиторий: https://github.com/Ollegro/PE10.5-Telegram.-1-post-generator-archive
 
@@ -47,8 +49,9 @@ IP смотрите в панели Beget → VPS → ваш сервер.
 
 Заполните:
 
-  OPENAI_API_KEY=sk-...
+  API_KEY=ваш_ключ_proxyapi
   CURRENTS_API_KEY=...
+  PROXYAPI_BASE_URL=https://api.proxyapi.ru/openai/v1
   PORT=8000
 
 Сохранить: Ctrl+O, Enter, Ctrl+X
@@ -130,7 +133,7 @@ Body (JSON): {"topic": "Преимущества медитации"}
 
 ЧАСТЫЕ ОШИБКИ
 -------------
-1. ValueError про OPENAI_API_KEY / CURRENTS_API_KEY
+1. ValueError про API_KEY / CURRENTS_API_KEY
    → проверьте .env и EnvironmentFile в bloggpt.service
 
 2. 502 Bad Gateway
@@ -139,8 +142,8 @@ Body (JSON): {"topic": "Преимущества медитации"}
 3. Zapier timeout
    → уменьшите max_tokens в app.py или увеличьте timeout в Zapier
 
-4. OpenAI API error
-   → проверьте баланс и ключ на platform.openai.com
+4. ProxyAPI / OpenAI error
+   → проверьте баланс и ключ на proxyapi.ru
 
 ФАЙЛЫ В ПАПКЕ beget-vps/
 -------------------------

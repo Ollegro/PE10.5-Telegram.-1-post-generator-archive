@@ -9,15 +9,15 @@ load_dotenv()
 
 app = FastAPI()
 
+PROXYAPI_BASE_URL = os.getenv("PROXYAPI_BASE_URL", "https://api.proxyapi.ru/openai/v1")
+api_key = os.getenv("API_KEY")
+currentsapi_key = os.getenv("CURRENTS_API_KEY")
 
-# Получаем API ключи из переменных окружения
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Устанавливаем ключ OpenAI из переменной окружения
-currentsapi_key = os.getenv("CURRENTS_API_KEY")  # Устанавливаем ключ Currents API из переменной окружения
+openai.api_key = api_key
+openai.api_base = PROXYAPI_BASE_URL
 
-
-# Проверяем, что оба API ключа заданы, иначе выбрасываем ошибку
-if not openai.api_key or not currentsapi_key:
-    raise ValueError("Переменные окружения OPENAI_API_KEY и CURRENTS_API_KEY должны быть установлены")
+if not api_key or not currentsapi_key:
+    raise ValueError("Переменные окружения API_KEY и CURRENTS_API_KEY должны быть установлены")
 
 class Topic(BaseModel):
     topic: str  # Модель данных для получения темы в запросе
