@@ -1,0 +1,15 @@
+[Unit]
+Description=BlogGPT FastAPI (PE10.5)
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/bloggpt
+EnvironmentFile=/var/www/bloggpt/.env
+ExecStart=/var/www/bloggpt/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

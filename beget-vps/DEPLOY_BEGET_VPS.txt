@@ -1,0 +1,149 @@
+ДЕПЛОЙ BlogGPT НА VPS BEGET (урок PE10.5)
+==========================================
+
+Замена Koyeb: FastAPI работает на вашем VPS 24/7.
+Zapier/Albato шлёт POST на https://ВАШ_ДОМЕН/generate-post
+
+ЧТО НУЖНО ЗАРАНЕЕ
+-----------------
+1. VPS Beget (Ubuntu), SSH-доступ (логин/пароль или ключ из панели).
+2. Домен, привязанный к VPS (или поддомен *.beget.tech).
+3. Ключи:
+   OPENAI_API_KEY
+   CURRENTS_API_KEY
+4. Репозиторий: https://github.com/Ollegro/PE10.5-Telegram.-1-post-generator-archive
+
+ШАГ 1. ПОДКЛЮЧЕНИЕ ПО SSH
+--------------------------
+Windows (PowerShell):
+
+  ssh root@IP_ВАШЕГО_VPS
+
+IP смотрите в панели Beget → VPS → ваш сервер.
+
+ШАГ 2. ПОДГОТОВКА СЕРВЕРА
+--------------------------
+  apt update && apt upgrade -y
+  apt install -y python3 python3-pip python3-venv git nginx certbot python3-certbot-nginx
+
+ШАГ 3. КЛОНИРОВАНИЕ ПРОЕКТА
+---------------------------
+  mkdir -p /var/www
+  cd /var/www
+  git clone https://github.com/Ollegro/PE10.5-Telegram.-1-post-generator-archive.git bloggpt
+  cd bloggpt
+
+ШАГ 4. ВИРТУАЛЬНОЕ ОКРУЖЕНИЕ И ЗАВИСИМОСТИ
+-----------------------------------------
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install --upgrade pip
+  pip install -r requirements.txt
+
+ШАГ 5. ФАЙЛ .env (СЕКРЕТЫ НЕ В GIT!)
+------------------------------------
+  cp .env.example .env
+  nano .env
+
+Заполните:
+
+  OPENAI_API_KEY=sk-...
+  CURRENTS_API_KEY=...
+  PORT=8000
+
+Сохранить: Ctrl+O, Enter, Ctrl+X
+
+ШАГ 6. ПРОВЕРКА ЛОКАЛЬНО НА VPS
+-------------------------------
+  source .venv/bin/activate
+  uvicorn app:app --host 127.0.0.1 --port 8000
+
+В другом SSH-окне:
+
+  curl http://127.0.0.1:8000/heartbeat
+
+Ожидается: {"status":"OK"}
+
+Остановить тест: Ctrl+C
+
+ШАГ 7. SYSTEMD (АВТОЗАПУСК)
+-----------------------------
+  cp beget-vps/bloggpt.service /etc/systemd/system/bloggpt.service
+  nano /etc/systemd/system/bloggpt.service
+
+Проверьте пути WorkingDirectory и ExecStart (должны быть /var/www/bloggpt).
+
+  systemctl daemon-reload
+  systemctl enable bloggpt
+  systemctl start bloggpt
+  systemctl status bloggpt
+
+Логи при ошибке:
+
+  journalctl -u bloggpt -n 50 --no-pager
+
+ШАГ 8. NGINX + HTTPS
+--------------------
+  cp beget-vps/nginx-bloggpt.conf /etc/nginx/sites-available/bloggpt
+  nano /etc/nginx/sites-available/bloggpt
+
+Замените ВАШ_ДОМЕН.ru на реальный домен.
+
+  ln -sf /etc/nginx/sites-available/bloggpt /etc/nginx/sites-enabled/bloggpt
+  nginx -t
+  systemctl reload nginx
+
+SSL (Let's Encrypt):
+
+  certbot --nginx -d ВАШ_ДОМЕН.ru
+
+Проверка с вашего ПК:
+
+  curl https://ВАШ_ДОМЕН.ru/heartbeat
+
+ШАГ 9. ТЕСТ ГЕНЕРАЦИИ ПОСТА
+----------------------------
+  curl -X POST https://ВАШ_ДОМЕН.ru/generate-post \
+    -H "Content-Type: application/json" \
+    -d '{"topic":"Python programming"}'
+
+Ответ может идти 15–60 секунд (3 запроса к OpenAI).
+
+ШАГ 10. ZAPIER / ALBATO
+-----------------------
+URL для webhook:
+
+  https://ВАШ_ДОМЕН.ru/generate-post
+
+Метод: POST
+Body (JSON): {"topic": "Преимущества медитации"}
+
+Важно: в nginx уже стоит proxy_read_timeout 300 — иначе Zapier оборвёт долгий запрос.
+
+ОБНОВЛЕНИЕ КОДА ПОСЛЕ ИЗМЕНЕНИЙ В GITHUB
+---------------------------------------
+  cd /var/www/bloggpt
+  git pull
+  source .venv/bin/activate
+  pip install -r requirements.txt
+  systemctl restart bloggpt
+
+ЧАСТЫЕ ОШИБКИ
+-------------
+1. ValueError про OPENAI_API_KEY / CURRENTS_API_KEY
+   → проверьте .env и EnvironmentFile в bloggpt.service
+
+2. 502 Bad Gateway
+   → systemctl status bloggpt — сервис не запущен
+
+3. Zapier timeout
+   → уменьшите max_tokens в app.py или увеличьте timeout в Zapier
+
+4. OpenAI API error
+   → проверьте баланс и ключ на platform.openai.com
+
+ФАЙЛЫ В ПАПКЕ beget-vps/
+-------------------------
+  DEPLOY_BEGET_VPS.txt   — эта инструкция
+  bloggpt.service        — автозапуск uvicorn
+  nginx-bloggpt.conf     — прокси + длинный timeout для GPT
